@@ -15,9 +15,6 @@ app.use(express.json())
 
 const PORT = process.env.PORT || 3002
 
-console.log('Starting backend/server.js')
-console.log('Frontend root path:', ROOT_DIR)
-console.log('Supabase URL:', process.env.SUPABASE_URL)
 
 function normalizeGym(row) {
   return {
@@ -59,22 +56,28 @@ app.use(express.static(path.join(ROOT_DIR, 'public')))
 app.use('/_next', express.static(path.join(ROOT_DIR, '.next')))
 
 app.post('/api/login', async (req, res) => {
-  console.log('POST /api/login', req.body)
   const { usuario, password } = req.body
 
   if (!usuario || !password) {
     return res.status(400).json({ success: false, message: 'Usuario y contraseña son obligatorios' })
   }
 
+  const normalizedUsuario = String(usuario).trim().toLowerCase()
+  const normalizedPassword = String(password).trim()
+
   try {
     const { data: gym, error: gymError } = await supabase
       .from('gyms')
       .select('*')
-      .eq('usuario', usuario)
-      .eq('password', password)
+      .ilike('usuario', normalizedUsuario)
+      .eq('password', normalizedPassword)
       .single()
 
-    if (gymError || !gym) {
+    if (gymError) {
+      throw gymError
+    }
+
+    if (!gym) {
       return res.status(401).json({ success: false, message: 'Credenciales inválidas' })
     }
 
@@ -97,7 +100,6 @@ app.post('/api/login', async (req, res) => {
 })
 
 app.post('/api/access', async (req, res) => {
-  console.log('POST /api/access', req.body)
   const { dni, gym_id } = req.body
 
   if (!dni || !gym_id) {
@@ -174,7 +176,6 @@ app.post('/api/access', async (req, res) => {
 })
 
 app.post('/api/user', async (req, res) => {
-  console.log('POST /api/user', req.body)
   const { nombre, dni, plan, fecha_inicio, gym_id } = req.body
 
   if (!nombre || !dni || !plan || !fecha_inicio || !gym_id) {
@@ -222,7 +223,6 @@ app.post('/api/user', async (req, res) => {
 })
 
 app.get('/api/user/:dni/:gym_id', async (req, res) => {
-  console.log('GET /api/user/:dni/:gym_id', req.params)
   const { dni, gym_id } = req.params
 
   try {
@@ -244,7 +244,6 @@ app.get('/api/user/:dni/:gym_id', async (req, res) => {
 })
 
 app.get('/api/users/:gym_id', async (req, res) => {
-  console.log('GET /api/users/:gym_id', req.params, req.query)
   const { gym_id } = req.params
   const { estado } = req.query
 
@@ -269,7 +268,6 @@ app.get('/api/users/:gym_id', async (req, res) => {
 })
 
 app.post('/api/renew', async (req, res) => {
-  console.log('POST /api/renew', req.body)
   const { dni, gym_id, plan } = req.body
 
   if (!dni || !gym_id || !plan) {
@@ -315,7 +313,6 @@ app.post('/api/renew', async (req, res) => {
 })
 
 app.put('/api/gym/:id', async (req, res) => {
-  console.log('PUT /api/gym/:id', req.params, req.body)
   const { id } = req.params
   const { nombre, logo, color } = req.body
 
@@ -356,7 +353,6 @@ app.put('/api/gym/:id', async (req, res) => {
 })
 
 app.get('/api/gym/:id', async (req, res) => {
-  console.log('GET /api/gym/:id', req.params)
   const { id } = req.params
 
   try {
@@ -378,8 +374,6 @@ app.get('/api/gym/:id', async (req, res) => {
 })
 
 app.get('/api/debug/gyms', async (req, res) => {
-  console.log('GET /api/debug/gyms')
-
   try {
     const { data: gyms, error } = await supabase
       .from('gyms')
@@ -387,26 +381,38 @@ app.get('/api/debug/gyms', async (req, res) => {
 
     if (error) throw error
 
-    console.log('Debug gyms result:', gyms)
     return res.json({ success: true, gyms })
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error interno del servidor' })
   }
 })
 
-app.all('*', (req, res) => handle(req, res))
+nextApp.prepare().then(() => {
+  app.all('*', (req, res) => handle(req, res))
 
-// nextApp.prepare().then(() => {
   initDatabase().then((created) => {
+    if (!created) {
+      throw new Error('Database initialization failed')
+    }
+
     console.log(`Database initialized${created ? ' and seeded' : ''}`)
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`Server ready on http://localhost:${PORT}`)
+    })
+
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`Port ${PORT} already in use. Stop the running process or set PORT to a free port before starting.`)
+      } else {
+        console.error('Server error:', error)
+      }
+      process.exit(1)
     })
   }).catch((error) => {
     console.error('Failed to initialize database:', error)
     process.exit(1)
   })
-// }).catch((error) => {
-//   console.error('Next.js prepare failed:', error)
-//   process.exit(1)
-// })
+}).catch((error) => {
+  console.error('Next.js prepare failed:', error)
+  process.exit(1)
+})
