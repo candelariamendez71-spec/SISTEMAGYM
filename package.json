@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postinstall": "pnpm rebuild sqlite3 -- --build-from-source",
+    "postinstall": "npm_config_build_from_source=true npm_config_python=$(which python3) pnpm rebuild || true",
     "start": "node backend/server.js",
     "start:backend": "node backend/server.js",
     "lint": "eslint ."
@@ -64,7 +64,7 @@
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.0",
     "sonner": "^1.7.1",
-    "sqlite3": "^6.0.1",
+    "sqlite3": "5.1.7",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2",
     "zod": "^3.24.1"
