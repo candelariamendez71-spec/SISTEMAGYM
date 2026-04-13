@@ -42,7 +42,7 @@ async function initDatabase() {
     console.error('Database initialization error:', error.message || error)
     return false
   }
-
+}
 
 module.exports = {
   supabase,
