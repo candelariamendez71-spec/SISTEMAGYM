@@ -65,10 +65,10 @@ async function findUser(dni, gym_id) {
 }
 
 app.use(express.static(path.join(ROOT_DIR, 'public')))
-app.use('/_next', express.static(path.join(ROOT_DIR, '.next', 'static')))
+app.use('/_next', express.static(path.join(ROOT_DIR, '.next')))
 
-app.post('/login', async (req, res) => {
-  console.log('Login request received:', req.body)
+app.post('/api/login', async (req, res) => {
+  console.log('POST /api/login', req.body)
   const { usuario, password } = req.body
 
   if (!usuario || !password) {
@@ -97,7 +97,8 @@ app.post('/login', async (req, res) => {
   }
 })
 
-app.post('/access', async (req, res) => {
+app.post('/api/access', async (req, res) => {
+  console.log('POST /api/access', req.body)
   const { dni, gym_id } = req.body
 
   if (!dni || !gym_id) {
@@ -152,7 +153,8 @@ app.post('/access', async (req, res) => {
   }
 })
 
-app.post('/user', async (req, res) => {
+app.post('/api/user', async (req, res) => {
+  console.log('POST /api/user', req.body)
   const { nombre, dni, plan, fecha_inicio, gym_id } = req.body
 
   if (!nombre || !dni || !plan || !fecha_inicio || !gym_id) {
@@ -191,7 +193,8 @@ app.post('/user', async (req, res) => {
   }
 })
 
-app.get('/user/:dni/:gym_id', async (req, res) => {
+app.get('/api/user/:dni/:gym_id', async (req, res) => {
+  console.log('GET /api/user/:dni/:gym_id', req.params)
   const { dni, gym_id } = req.params
   const db = openDb()
   try {
@@ -207,7 +210,8 @@ app.get('/user/:dni/:gym_id', async (req, res) => {
   }
 })
 
-app.get('/users/:gym_id', async (req, res) => {
+app.get('/api/users/:gym_id', async (req, res) => {
+  console.log('GET /api/users/:gym_id', req.params, req.query)
   const { gym_id } = req.params
   const { estado } = req.query
   const db = openDb()
@@ -226,7 +230,8 @@ app.get('/users/:gym_id', async (req, res) => {
   }
 })
 
-app.post('/renew', async (req, res) => {
+app.post('/api/renew', async (req, res) => {
+  console.log('POST /api/renew', req.body)
   const { dni, gym_id, plan } = req.body
 
   if (!dni || !gym_id || !plan) {
@@ -259,7 +264,8 @@ app.post('/renew', async (req, res) => {
   }
 })
 
-app.put('/gym/:id', async (req, res) => {
+app.put('/api/gym/:id', async (req, res) => {
+  console.log('PUT /api/gym/:id', req.params, req.body)
   const { id } = req.params
   const { nombre, logo, color } = req.body
 
@@ -289,10 +295,30 @@ app.put('/gym/:id', async (req, res) => {
   }
 })
 
-app.get('/debug/gyms', async (req, res) => {
+app.get('/api/gym/:id', async (req, res) => {
+  console.log('GET /api/gym/:id', req.params)
+  const { id } = req.params
+  const db = openDb()
+  try {
+    const gym = await get(db, 'SELECT * FROM gyms WHERE id = ?', [id])
+    if (!gym) {
+      return res.status(404).json({ success: false, message: 'Gimnasio no encontrado' })
+    }
+    return res.json({ success: true, gym: normalizeGym(gym) })
+  } catch (error) {
+    console.error('GET /api/gym/:id error:', error)
+    return res.status(500).json({ success: false, message: 'Error interno del servidor' })
+  } finally {
+    db.close()
+  }
+})
+
+app.get('/api/debug/gyms', async (req, res) => {
+  console.log('GET /api/debug/gyms')
   const db = openDb()
   try {
     const gyms = await all(db, 'SELECT * FROM gyms')
+    console.log('Debug gyms result:', gyms)
     return res.json({ success: true, gyms })
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error interno del servidor' })
