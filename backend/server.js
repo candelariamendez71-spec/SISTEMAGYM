@@ -1,13 +1,23 @@
 const express = require('express')
 const cors = require('cors')
 const path = require('path')
-const { initDatabase, openDb, run, get, all } = require('./db')
+const next = require('next')
+const { initDatabase, openDb, run, get, all, DB_PATH } = require('./db')
+
+const ROOT_DIR = path.join(__dirname, '..')
+const dev = process.env.NODE_ENV !== 'production'
+const nextApp = next({ dev, dir: ROOT_DIR })
+const handle = nextApp.getRequestHandler()
 
 const app = express()
 app.use(cors())
 app.use(express.json())
 
 const PORT = process.env.PORT || 3001
+
+console.log('Starting backend/server.js')
+console.log('Frontend root path:', ROOT_DIR)
+console.log('Database path:', DB_PATH)
 
 function normalizeGym(row) {
   return {
@@ -53,6 +63,9 @@ async function findUser(dni, gym_id) {
     db.close()
   }
 }
+
+app.use(express.static(path.join(ROOT_DIR, 'public')))
+app.use('/_next', express.static(path.join(ROOT_DIR, '.next', 'static')))
 
 app.post('/login', async (req, res) => {
   console.log('Login request received:', req.body)
@@ -128,7 +141,7 @@ app.post('/access', async (req, res) => {
 
     return res.json({
       success: true,
-      message: user.plan === 'libre' ? 'Acceso permitido' : `Acceso permitido. Te quedan ${pasesRestantes} pases` ,
+      message: user.plan === 'libre' ? 'Acceso permitido' : `Acceso permitido. Te quedan ${pasesRestantes} pases`,
       user: updatedUser,
       pases_restantes: pasesRestantes,
     })
@@ -153,11 +166,9 @@ app.post('/user', async (req, res) => {
     return res.status(400).json({ success: false, message: 'Fecha de inicio inválida' })
   }
 
-  // Calcular vencimiento como fecha_inicio + 1 mes
   const fechaVencimiento = new Date(fechaInicio)
   fechaVencimiento.setMonth(fechaVencimiento.getMonth() + 1)
   const vencimiento = formatDate(fechaVencimiento)
-
   const now = formatDate()
 
   const db = openDb()
@@ -290,12 +301,19 @@ app.get('/debug/gyms', async (req, res) => {
   }
 })
 
-initDatabase().then((created) => {
-  console.log(`Database initialized${created ? ' and seeded' : ''}`)
-  app.listen(PORT, () => {
-    console.log(`Backend server running on http://localhost:${PORT}`)
+app.all('*', (req, res) => handle(req, res))
+
+nextApp.prepare().then(() => {
+  initDatabase().then((created) => {
+    console.log(`Database initialized${created ? ' and seeded' : ''}`)
+    app.listen(PORT, () => {
+      console.log(`Server ready on http://localhost:${PORT}`)
+    })
+  }).catch((error) => {
+    console.error('Failed to initialize database:', error)
+    process.exit(1)
   })
 }).catch((error) => {
-  console.error('Failed to initialize database:', error)
+  console.error('Next.js prepare failed:', error)
   process.exit(1)
 })
