@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postinstall": "npm_config_build_from_source=true npm_config_python=$(which python3) pnpm rebuild || true",
+    "postinstall": "pnpm rebuild || true",
     "start": "node backend/server.js",
     "start:backend": "node backend/server.js",
     "lint": "eslint ."
