@@ -51,13 +51,35 @@ function all(db, sql, params = []) {
 
 function initDatabase() {
   return new Promise((resolve, reject) => {
+    console.log('DB_PATH:', DB_PATH)
     const exists = fs.existsSync(DB_PATH)
+    console.log('DB exists:', exists)
     const db = openDb()
 
-    db.exec(INIT_SQL, (err) => {
+    db.exec(INIT_SQL, async (err) => {
       if (err) {
+        console.error('DB init error:', err)
         reject(err)
       } else {
+        try {
+          console.log('DB initialized successfully')
+          await db.run(`
+            INSERT OR IGNORE INTO gyms (id, nombre, usuario, password, logo, color)
+            VALUES (1, 'Apolo Gym', 'admin', '1234', '', '#000')
+          `)
+
+          await db.run(`
+            INSERT OR IGNORE INTO usuarios 
+            (nombre, dni, tipo_plan, fecha_inicio, fecha_vencimiento, ingresos_disponibles, estado, gym_id, created_at)
+            VALUES 
+            ('Usuario Test', '12345678', 'libre', '2024-01-01', '2099-01-01', 0, 'activo', 1, '2024-01-01')
+          `)
+        } catch (seedError) {
+          console.error('DB seed error:', seedError)
+          reject(seedError)
+          return
+        }
+
         db.close((closeError) => {
           if (closeError) {
             reject(closeError)

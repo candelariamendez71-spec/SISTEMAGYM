@@ -55,6 +55,7 @@ async function findUser(dni, gym_id) {
 }
 
 app.post('/login', async (req, res) => {
+  console.log('Login request received:', req.body)
   const { usuario, password } = req.body
 
   if (!usuario || !password) {
@@ -64,6 +65,7 @@ app.post('/login', async (req, res) => {
   const db = openDb()
   try {
     const gym = await get(db, 'SELECT * FROM gyms WHERE usuario = ? AND password = ?', [usuario, password])
+    console.log('Gym query result:', gym)
     if (!gym) {
       return res.status(401).json({ success: false, message: 'Credenciales inválidas' })
     }
@@ -75,6 +77,7 @@ app.post('/login', async (req, res) => {
       users: users.map(normalizeUser),
     })
   } catch (error) {
+    console.error('Login error:', error)
     return res.status(500).json({ success: false, message: 'Error interno del servidor' })
   } finally {
     db.close()
@@ -275,15 +278,11 @@ app.put('/gym/:id', async (req, res) => {
   }
 })
 
-app.get('/gym/:id', async (req, res) => {
-  const { id } = req.params
+app.get('/debug/gyms', async (req, res) => {
   const db = openDb()
   try {
-    const gym = await get(db, 'SELECT * FROM gyms WHERE id = ?', [id])
-    if (!gym) {
-      return res.status(404).json({ success: false, message: 'Gimnasio no encontrado' })
-    }
-    return res.json({ success: true, gym: normalizeGym(gym) })
+    const gyms = await all(db, 'SELECT * FROM gyms')
+    return res.json({ success: true, gyms })
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error interno del servidor' })
   } finally {
