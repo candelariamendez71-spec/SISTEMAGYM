@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postinstall": "pnpm rebuild || true",
+    "postinstall": "echo 'Dependencies installed'",
     "start": "node backend/server.js",
     "start:backend": "node backend/server.js",
     "lint": "eslint ."
@@ -64,7 +64,8 @@
     "react-resizable-panels": "^2.1.7",
     "recharts": "2.15.0",
     "sonner": "^1.7.1",
-    "sqlite3": "5.1.7",
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5",
     "tailwind-merge": "^3.3.1",
     "vaul": "^1.1.2",
     "zod": "^3.24.1"

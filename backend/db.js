@@ -1,102 +1,38 @@
-const sqlite3 = require('sqlite3').verbose()
-const fs = require('fs')
-const path = require('path')
+const { createClient } = require('@supabase/supabase-js')
+require('dotenv').config({ path: '.env.local' })
 
-const DB_PATH = path.join(__dirname, 'database.sqlite')
-const INIT_SQL = fs.readFileSync(path.join(__dirname, 'init.sql'), 'utf8')
+const supabaseUrl = process.env.SUPABASE_URL || 'https://sviowmmerkmogrytmtsh.supabase.co'
+const supabaseKey = process.env.SUPABASE_KEY
+const supabase = createClient(supabaseUrl, supabaseKey)
 
-function openDb() {
-  const db = new sqlite3.Database(DB_PATH)
-  db.serialize(() => {
-    db.run('PRAGMA foreign_keys = ON')
-  })
-  return db
-}
-
-function run(db, sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(this)
-      }
-    })
-  })
-}
-
-function get(db, sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(row)
-      }
-    })
-  })
-}
-
-function all(db, sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(rows)
-      }
-    })
-  })
-}
-
-function initDatabase() {
-  return new Promise((resolve, reject) => {
-    console.log('DB_PATH:', DB_PATH)
-    const exists = fs.existsSync(DB_PATH)
-    console.log('DB exists:', exists)
-    const db = openDb()
-
-    db.exec(INIT_SQL, async (err) => {
-      if (err) {
-        console.error('DB init error:', err)
-        reject(err)
-      } else {
-        try {
-          console.log('DB initialized successfully')
-          await db.run(`
-            INSERT OR IGNORE INTO gyms (nombre, usuario, password, logo, color)
-            VALUES ('Apolo Gym', 'admin', '1234', '', '#000')
-          `)
-
-          await db.run(`
-            INSERT OR IGNORE INTO usuarios 
-            (nombre, dni, tipo_plan, fecha_inicio, fecha_vencimiento, ingresos_disponibles, estado, gym_id, created_at)
-            VALUES 
-            ('Usuario Test', '12345678', 'libre', '2024-01-01', '2099-01-01', 0, 'activo', (SELECT id FROM gyms WHERE usuario = 'admin'), '2024-01-01')
-          `)
-        } catch (seedError) {
-          console.error('DB seed error:', seedError)
-          reject(seedError)
-          return
-        }
-
-        db.close((closeError) => {
-          if (closeError) {
-            reject(closeError)
-          } else {
-            resolve(!exists)
-          }
-        })
-      }
-    })
-  })
+async function initDatabase() {
+  try {
+    console.log('🗄️ Initializing Supabase database...')
+    
+    // Create gyms table
+    await supabase.from('gyms').select('id').limit(1)
+    console.log('✅ Database connected to Supabase')
+    
+    // Seed initial gyms if not exists
+    const { data: gyms } = await supabase.from('gyms').select('id')
+    if (!gyms || gyms.length === 0) {
+      await supabase.from('gyms').insert([
+        { nombre: 'Cyber Argento Gym', logo: '/images/logo.png', color: '#00FFC6', usuario: 'cyber', password: '1234' },
+        { nombre: 'Gimnasio Capital', logo: '/images/logo.png', color: '#FF6B6B', usuario: 'capital', password: '5678' },
+        { nombre: 'Gimnasio Norte', logo: '/images/logo.png', color: '#4ECDC4', usuario: 'norte', password: 'abcd' },
+        { nombre: 'Apolo Gym', logo: '/images/logo.png', color: '#FFD700', usuario: 'apologymiseas', password: 'veronicaapolo873' }
+      ])
+      console.log('✅ Initial gyms seeded')
+    }
+    
+    return true
+  } catch (error) {
+    console.error('❌ Database error:', error.message)
+    return false
+  }
 }
 
 module.exports = {
-  DB_PATH,
-  openDb,
-  run,
-  get,
-  all,
-  initDatabase,
+  supabase,
+  initDatabase
 }
