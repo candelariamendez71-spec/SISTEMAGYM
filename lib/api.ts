@@ -1,9 +1,9 @@
 import type { Gym, User, AccessResponse, LoginResponse } from '@/types/gym'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sistemagym-production-aa06.up.railway.app'
+const API_BASE_URL = ''
 
 async function request<T>(path: string, options: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, options)
+  const response = await fetch(path, options)
   const data = await response.json().catch(() => ({ success: false, message: 'Error de conexión' }))
 
   if (!response.ok) {
@@ -14,7 +14,7 @@ async function request<T>(path: string, options: RequestInit): Promise<T> {
 }
 
 export async function login(usuario: string, contraseña: string): Promise<LoginResponse & { users?: User[] }> {
-  const data = await request<{ success: boolean; gym?: Gym; users?: User[]; message?: string }>('/login', {
+  const data = await request<{ success: boolean; gym?: Gym; users?: User[]; message?: string }>('/api/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ usuario, password: contraseña }),
@@ -23,7 +23,7 @@ export async function login(usuario: string, contraseña: string): Promise<Login
 }
 
 export async function checkAccess(dni: string, gymId: string): Promise<AccessResponse> {
-  const data = await request<AccessResponse>('/access', {
+  const data = await request<AccessResponse>('/api/access', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ dni, gym_id: gymId }),
@@ -32,7 +32,7 @@ export async function checkAccess(dni: string, gymId: string): Promise<AccessRes
 }
 
 export async function getUser(dni: string, gymId: string): Promise<User | null> {
-  const data = await request<{ success: boolean; user?: User }>('/user/' + encodeURIComponent(dni) + '/' + encodeURIComponent(gymId), {
+  const data = await request<{ success: boolean; user?: User }>('/api/user/' + encodeURIComponent(dni) + '/' + encodeURIComponent(gymId), {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   })
@@ -41,7 +41,7 @@ export async function getUser(dni: string, gymId: string): Promise<User | null> 
 
 export async function getUsers(gymId: string, estado?: 'activo' | 'inactivo') {
   const query = estado ? `?estado=${encodeURIComponent(estado)}` : ''
-  const data = await request<{ success: boolean; total: number; users: User[] }>('/users/' + encodeURIComponent(gymId) + query, {
+  const data = await request<{ success: boolean; total: number; users: User[] }>('/api/users/' + encodeURIComponent(gymId) + query, {
     method: 'GET',
     headers: { 'Content-Type': 'application/json' },
   })
@@ -49,7 +49,7 @@ export async function getUsers(gymId: string, estado?: 'activo' | 'inactivo') {
 }
 
 export async function createUser(userData: Omit<User, 'id' | 'created_at'>): Promise<User> {
-  const data = await request<{ success: boolean; user: User }>('/user', {
+  const data = await request<{ success: boolean; user: User }>('/api/user', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(userData),
@@ -58,7 +58,7 @@ export async function createUser(userData: Omit<User, 'id' | 'created_at'>): Pro
 }
 
 export async function renewPlan(dni: string, gymId: string, plan: 'libre' | '12pases'): Promise<{ success: boolean; user?: User }> {
-  const data = await request<{ success: boolean; user?: User }>('/renew', {
+  const data = await request<{ success: boolean; user?: User }>('/api/renew', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ dni, gym_id: gymId, plan }),
@@ -67,7 +67,7 @@ export async function renewPlan(dni: string, gymId: string, plan: 'libre' | '12p
 }
 
 export async function updateGym(id: string, payload: { nombre: string; logo: string; color: string }) {
-  const data = await request<{ success: boolean; gym?: Gym }>('/gym/' + encodeURIComponent(id), {
+  const data = await request<{ success: boolean; gym?: Gym }>('/api/gym/' + encodeURIComponent(id), {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
