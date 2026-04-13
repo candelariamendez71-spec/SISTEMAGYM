@@ -1,6 +1,6 @@
 import type { Gym, User, AccessResponse, LoginResponse } from '@/types/gym'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://sistemagym-production-aa06.up.railway.app'
 
 async function request<T>(path: string, options: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, options)
