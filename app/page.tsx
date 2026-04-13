@@ -41,8 +41,8 @@ export default function LoginPage() {
       } else {
         setError(response.message || 'Error al iniciar sesión')
       }
-    } catch {
-      setError('Error de conexión')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Error de conexión')
     } finally {
       setLoading(false)
     }

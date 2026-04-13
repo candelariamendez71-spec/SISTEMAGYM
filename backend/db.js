@@ -64,15 +64,15 @@ function initDatabase() {
         try {
           console.log('DB initialized successfully')
           await db.run(`
-            INSERT OR IGNORE INTO gyms (id, nombre, usuario, password, logo, color)
-            VALUES (1, 'Apolo Gym', 'admin', '1234', '', '#000')
+            INSERT OR IGNORE INTO gyms (nombre, usuario, password, logo, color)
+            VALUES ('Apolo Gym', 'admin', '1234', '', '#000')
           `)
 
           await db.run(`
             INSERT OR IGNORE INTO usuarios 
             (nombre, dni, tipo_plan, fecha_inicio, fecha_vencimiento, ingresos_disponibles, estado, gym_id, created_at)
             VALUES 
-            ('Usuario Test', '12345678', 'libre', '2024-01-01', '2099-01-01', 0, 'activo', 1, '2024-01-01')
+            ('Usuario Test', '12345678', 'libre', '2024-01-01', '2099-01-01', 0, 'activo', (SELECT id FROM gyms WHERE usuario = 'admin'), '2024-01-01')
           `)
         } catch (seedError) {
           console.error('DB seed error:', seedError)

@@ -4,10 +4,18 @@ const API_BASE_URL = ''
 
 async function request<T>(path: string, options: RequestInit): Promise<T> {
   const response = await fetch(path, options)
-  const data = await response.json().catch(() => ({ success: false, message: 'Error de conexión' }))
+  const text = await response.text()
+  let data: any
+
+  try {
+    data = JSON.parse(text)
+  } catch {
+    data = { success: false, message: text || 'Error de conexión' }
+  }
 
   if (!response.ok) {
-    throw new Error((data as any).message || 'Error del servidor')
+    const message = data?.message || 'Error del servidor'
+    throw new Error(message)
   }
 
   return data as T

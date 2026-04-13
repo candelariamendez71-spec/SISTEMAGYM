@@ -1,5 +1,5 @@
 services:
   - type: web
     env: node
-    buildCommand: pnpm install --no-frozen-lockfile && pnpm run build
+    buildCommand: corepack enable && corepack prepare pnpm@8.11.0 --activate && pnpm install --no-frozen-lockfile && pnpm run build
     startCommand: pnpm start
