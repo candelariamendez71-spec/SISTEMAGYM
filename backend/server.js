@@ -16,6 +16,7 @@ app.use(express.json())
 const PORT = process.env.PORT || 3002
 
 
+
 function normalizeGym(row) {
   return {
     gym_id: String(row.id),
@@ -56,6 +57,7 @@ app.use(express.static(path.join(ROOT_DIR, 'public')))
 app.use('/_next', express.static(path.join(ROOT_DIR, '.next')))
 
 app.post('/api/login', async (req, res) => {
+
   const { usuario, password } = req.body
 
   if (!usuario || !password) {
@@ -72,6 +74,8 @@ app.post('/api/login', async (req, res) => {
       .ilike('usuario', normalizedUsuario)
       .eq('password', normalizedPassword)
       .single()
+
+
 
     if (gymError) {
       throw gymError
@@ -394,8 +398,6 @@ nextApp.prepare().then(() => {
     if (!created) {
       throw new Error('Database initialization failed')
     }
-
-    console.log(`Database initialized${created ? ' and seeded' : ''}`)
     const server = app.listen(PORT, () => {
       console.log(`Server ready on http://localhost:${PORT}`)
     })

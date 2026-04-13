@@ -4,7 +4,7 @@ const { createClient } = require('@supabase/supabase-js')
 const envPath = path.join(__dirname, '..', '.env.local')
 require('dotenv').config({ path: envPath })
 
-const supabaseUrl = process.env.SUPABASE_URL || 'https://sviowmmerkmogrytmtsh.supabase.co'
+const supabaseUrl = process.env.SUPABASE_URL
 const supabaseKey = process.env.SUPABASE_KEY || process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseKey) {
@@ -15,13 +15,10 @@ const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function initDatabase() {
   try {
-    console.log('🗄️ Initializing Supabase database...')
-
     const { error: connectError } = await supabase.from('gyms').select('id').limit(1)
     if (connectError) {
       throw connectError
     }
-    console.log('✅ Database connected to Supabase')
 
     const { data: gyms, error: gymsError } = await supabase.from('gyms').select('id')
     if (gymsError) {
@@ -38,16 +35,14 @@ async function initDatabase() {
       if (insertError) {
         throw insertError
       }
-      console.log('✅ Initial gyms seeded')
     }
 
     return true
   } catch (error) {
-    console.error('❌ Database error:', error.message || error)
-    console.error(error)
+    console.error('Database initialization error:', error.message || error)
     return false
   }
-}
+
 
 module.exports = {
   supabase,
