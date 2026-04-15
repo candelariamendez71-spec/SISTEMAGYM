@@ -10,7 +10,8 @@ import {
   Settings, 
   LogOut, 
   ScanLine,
-  LayoutDashboard
+  LayoutDashboard,
+  Wallet
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { AnimatedLogo } from '@/components/animated-logo'
@@ -20,6 +21,7 @@ const navItems = [
   { href: '/admin', label: 'Panel', icon: LayoutDashboard },
   { href: '/admin/users', label: 'Usuarios', icon: Users },
   { href: '/admin/create', label: 'Crear Usuario', icon: UserPlus },
+  { href: '/admin/caja', label: 'Caja', icon: Wallet },
   { href: '/admin/settings', label: 'Configuración', icon: Settings },
 ]
 

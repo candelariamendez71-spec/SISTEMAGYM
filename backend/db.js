@@ -83,6 +83,55 @@ async function ensureGymPriceColumns() {
   return true
 }
 
+async function ensureCajaMovimientosTable() {
+  // Check if table exists
+  const { error: selectError } = await supabase
+    .from('caja_movimientos')
+    .select('id')
+    .limit(1)
+
+  if (!selectError) {
+    return true
+  }
+
+  const message = String(selectError.message || '').toLowerCase()
+  const tableNotFound = 
+    message.includes('caja_movimientos') ||
+    message.includes('relation') ||
+    message.includes('table')
+
+  if (!tableNotFound) {
+    throw selectError
+  }
+
+  const migrationSql = `
+    CREATE TABLE IF NOT EXISTS caja_movimientos (
+      id BIGSERIAL PRIMARY KEY,
+      gym_id BIGINT NOT NULL,
+      tipo TEXT NOT NULL CHECK(tipo IN ('ingreso', 'egreso')),
+      categoria TEXT NOT NULL CHECK(categoria IN ('mensualidad', 'clase_prueba', 'producto', 'gasto')),
+      descripcion TEXT NOT NULL,
+      monto NUMERIC NOT NULL CHECK(monto > 0),
+      metodo_pago TEXT NOT NULL CHECK(metodo_pago IN ('efectivo', 'transferencia', 'otro')),
+      fecha DATE NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_caja_gym_fecha ON caja_movimientos(gym_id, fecha);
+    CREATE INDEX IF NOT EXISTS idx_caja_tipo ON caja_movimientos(tipo);
+    
+    ALTER TABLE caja_movimientos DISABLE ROW LEVEL SECURITY;
+  `
+
+  const migrated = await runSqlMigration(migrationSql)
+  if (!migrated) {
+    console.warn('Could not auto-migrate caja_movimientos table. Please run the SQL migration manually.')
+    return false
+  }
+
+  return true
+}
+
 async function initDatabase() {
   try {
     const { error: connectError } = await supabase.from('gyms').select('id').limit(1)
@@ -96,6 +145,7 @@ async function initDatabase() {
     }
 
     await ensureGymPriceColumns()
+    await ensureCajaMovimientosTable()
 
     if (!gyms || gyms.length === 0) {
       const { error: insertError } = await supabase.from('gyms').insert([
@@ -119,5 +169,6 @@ async function initDatabase() {
 module.exports = {
   supabase,
   initDatabase,
-  ensureGymPriceColumns
+  ensureGymPriceColumns,
+  ensureCajaMovimientosTable
 }
