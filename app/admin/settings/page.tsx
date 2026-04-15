@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { Settings, Upload, Save, Check, Palette, Building } from 'lucide-react'
 import Image from 'next/image'
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { useGym } from '@/context/gym-context'
 import { useSound } from '@/hooks/use-sound'
-import { updateGym } from '@/lib/api'
+import { getGymPrices, updateGym, updateGymPrices } from '@/lib/api'
 
 const colorPresets = [
   '#00FFC6', // Default turquoise
@@ -32,6 +32,46 @@ export default function SettingsPage() {
   const [logoPreview, setLogoPreview] = useState(gym?.logo || '/images/logo.png')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [precioLibre, setPrecioLibre] = useState(String(gym?.precio_libre ?? 0))
+  const [precio12Pases, setPrecio12Pases] = useState(String(gym?.precio_12_pases ?? 0))
+  const [savingPrices, setSavingPrices] = useState(false)
+  const [pricesSaved, setPricesSaved] = useState(false)
+  const [pricesError, setPricesError] = useState('')
+
+  useEffect(() => {
+    if (!gym) return
+
+    setPrecioLibre(String(gym.precio_libre ?? 0))
+    setPrecio12Pases(String(gym.precio_12_pases ?? 0))
+
+    const loadPrices = async () => {
+      try {
+        const response = await getGymPrices(gym.gym_id)
+        if (response.success && response.prices) {
+          setPrecioLibre(String(response.prices.precio_libre))
+          setPrecio12Pases(String(response.prices.precio_12_pases))
+          setGym({
+            ...gym,
+            precio_libre: response.prices.precio_libre,
+            precio_12_pases: response.prices.precio_12_pases,
+          })
+        }
+      } catch {
+        // Keep local values when backend is unavailable.
+      }
+    }
+
+    loadPrices()
+  }, [gym?.gym_id])
+
+  const formatArs = (value: number) => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -48,6 +88,7 @@ export default function SettingsPage() {
     if (!gym) return
 
     setSaving(true)
+    setSaveError('')
 
     try {
       const response = await updateGym(gym.gym_id, {
@@ -63,15 +104,48 @@ export default function SettingsPage() {
         setTimeout(() => setSaved(false), 2000)
       }
     } catch {
-      // fallback to local save if backend is unavailable
-      setGym({
-        ...gym,
-        nombre: nombre.trim() || gym.nombre,
-        color,
-        logo: logoPreview,
-      })
+      setSaveError('No se pudieron guardar los cambios del perfil')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSavePrices = async () => {
+    if (!gym) return
+
+    const parsedPrecioLibre = Number(precioLibre)
+    const parsedPrecio12Pases = Number(precio12Pases)
+
+    if (!Number.isFinite(parsedPrecioLibre) || parsedPrecioLibre < 0 || !Number.isFinite(parsedPrecio12Pases) || parsedPrecio12Pases < 0) {
+      setPricesError('Ingresa precios validos (numeros positivos)')
+      return
+    }
+
+    setSavingPrices(true)
+    setPricesError('')
+
+    try {
+      const response = await updateGymPrices(gym.gym_id, {
+        precio_libre: parsedPrecioLibre,
+        precio_12_pases: parsedPrecio12Pases,
+      })
+
+      if (response.success && response.prices) {
+        setGym({
+          ...gym,
+          precio_libre: response.prices.precio_libre,
+          precio_12_pases: response.prices.precio_12_pases,
+        })
+        setPrecioLibre(String(response.prices.precio_libre))
+        setPrecio12Pases(String(response.prices.precio_12_pases))
+        playSuccess()
+        setPricesSaved(true)
+        setTimeout(() => setPricesSaved(false), 2000)
+      }
+    } catch {
+      setPricesError('No se pudieron guardar los precios')
+    } finally {
+      setSavingPrices(false)
     }
   }
 
@@ -158,6 +232,72 @@ export default function SettingsPage() {
                 className="h-12 bg-secondary/50 border-border text-foreground placeholder:text-muted-foreground"
               />
             </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Prices */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.15 }}
+      >
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-foreground">
+              Precios de Planes
+            </CardTitle>
+            <CardDescription className="text-muted-foreground">
+              Define el valor del plan libre y del plan de 12 pases para este gimnasio.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="precio_libre" className="text-sm font-medium text-foreground">
+                  Precio mensual (Plan Libre)
+                </label>
+                <Input
+                  id="precio_libre"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={precioLibre}
+                  onChange={(e) => setPrecioLibre(e.target.value)}
+                  className="h-12 bg-secondary/50 border-border text-foreground"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="precio_12_pases" className="text-sm font-medium text-foreground">
+                  Precio Plan 12 Pases
+                </label>
+                <Input
+                  id="precio_12_pases"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={precio12Pases}
+                  onChange={(e) => setPrecio12Pases(e.target.value)}
+                  className="h-12 bg-secondary/50 border-border text-foreground"
+                />
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-border bg-secondary/20 p-4 text-sm text-foreground">
+              <p>Plan Libre: <span className="font-semibold text-primary">{formatArs(Number(precioLibre) || 0)}</span></p>
+              <p>Plan 12 Pases: <span className="font-semibold text-primary">{formatArs(Number(precio12Pases) || 0)}</span></p>
+            </div>
+
+            {pricesError && <p className="text-sm text-destructive">{pricesError}</p>}
+
+            <Button
+              onClick={handleSavePrices}
+              disabled={savingPrices}
+              className="w-full h-12 font-semibold"
+            >
+              {savingPrices ? 'Guardando precios...' : pricesSaved ? 'Precios guardados' : 'Guardar precios'}
+            </Button>
           </CardContent>
         </Card>
       </motion.div>
@@ -270,6 +410,7 @@ export default function SettingsPage() {
           )}
         </Button>
       </motion.div>
+      {saveError && <p className="text-sm text-destructive text-center">{saveError}</p>}
     </div>
   )
 }

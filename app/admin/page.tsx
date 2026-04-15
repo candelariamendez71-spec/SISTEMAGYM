@@ -20,6 +20,17 @@ export default function AdminPanel() {
   const { gym, users, setUsers } = useGym()
   const { playSuccess, playError } = useSound()
 
+  const formatArs = (value: number) => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+
+  const precioLibre = gym?.precio_libre ?? 0
+  const precio12Pases = gym?.precio_12_pases ?? 0
+
   const totalUsers = users.length
   const activeUsers = users.filter(u => u.activo).length
   const inactiveUsers = users.filter(u => !u.activo).length
@@ -288,7 +299,7 @@ export default function AdminPanel() {
                   className="w-full h-14 justify-between border-border text-foreground hover:bg-secondary hover:border-primary"
                 >
                   <span>Plan Libre</span>
-                  <span className="font-bold text-primary">$28.000</span>
+                  <span className="font-bold text-primary">{formatArs(precioLibre)}</span>
                 </Button>
               </motion.div>
 
@@ -300,7 +311,7 @@ export default function AdminPanel() {
                   className="w-full h-14 justify-between border-border text-foreground hover:bg-secondary hover:border-primary"
                 >
                   <span>Plan 12 Pases</span>
-                  <span className="font-bold text-primary">$26.000</span>
+                  <span className="font-bold text-primary">{formatArs(precio12Pases)}</span>
                 </Button>
               </motion.div>
             </div>

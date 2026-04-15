@@ -57,17 +57,18 @@ export default function AccessPage() {
       const response = await checkAccess(dni, gym.gym_id)
 
       if (response.success && response.user) {
+        const accessedUser = response.user
         playSuccess()
 
         const updatedUsers = users.map(u =>
-          u.dni === dni ? { ...response.user } : u
+          u.dni === dni ? { ...accessedUser } : u
         )
         setUsers(updatedUsers)
 
         setAccessResult({
           state: 'success',
-          message: `Bienvenido, ${response.user.nombre}`,
-          userName: response.user.nombre,
+          message: `Bienvenido, ${accessedUser.nombre}`,
+          userName: accessedUser.nombre,
           subMessage: response.message,
           remainingPasses: response.pases_restantes,
         })

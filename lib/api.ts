@@ -56,7 +56,7 @@ export async function getUsers(gymId: string, estado?: 'activo' | 'inactivo') {
   return data
 }
 
-export async function createUser(userData: Omit<User, 'id' | 'created_at'>): Promise<User> {
+export async function createUser(userData: { nombre: string; dni: string; plan: 'libre' | '12pases'; fecha_inicio: string; gym_id: string }): Promise<User> {
   const data = await request<{ success: boolean; user: User }>('/api/user', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -80,5 +80,30 @@ export async function updateGym(id: string, payload: { nombre: string; logo: str
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   })
+  return data
+}
+
+export async function getGymPrices(gymId: string) {
+  const data = await request<{ success: boolean; prices?: { precio_libre: number; precio_12_pases: number } }>(
+    '/api/gym/' + encodeURIComponent(gymId) + '/prices',
+    {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    }
+  )
+
+  return data
+}
+
+export async function updateGymPrices(gymId: string, payload: { precio_libre: number; precio_12_pases: number }) {
+  const data = await request<{ success: boolean; prices?: { precio_libre: number; precio_12_pases: number }; gym?: Gym }>(
+    '/api/gym/' + encodeURIComponent(gymId) + '/prices',
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }
+  )
+
   return data
 }

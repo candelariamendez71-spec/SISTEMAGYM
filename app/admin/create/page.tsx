@@ -23,6 +23,17 @@ export default function CreateUserPage() {
   const { gym, users, setUsers } = useGym()
   const { playSuccess, playError } = useSound()
 
+  const formatArs = (value: number) => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      maximumFractionDigits: 0,
+    }).format(value)
+  }
+
+  const precioLibre = gym?.precio_libre ?? 0
+  const precio12Pases = gym?.precio_12_pases ?? 0
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
@@ -173,7 +184,7 @@ export default function CreateUserPage() {
                         }`}
                       >
                         <p className="font-semibold text-foreground">Plan Libre</p>
-                        <p className="text-sm text-primary font-bold">$28.000</p>
+                        <p className="text-sm text-primary font-bold">{formatArs(precioLibre)}</p>
                       </button>
                     </motion.div>
 
@@ -188,7 +199,7 @@ export default function CreateUserPage() {
                         }`}
                       >
                         <p className="font-semibold text-foreground">12 Pases</p>
-                        <p className="text-sm text-primary font-bold">$26.000</p>
+                        <p className="text-sm text-primary font-bold">{formatArs(precio12Pases)}</p>
                       </button>
                     </motion.div>
                   </div>

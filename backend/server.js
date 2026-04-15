@@ -2,7 +2,7 @@ const express = require('express')
 const cors = require('cors')
 const path = require('path')
 const next = require('next')
-const { initDatabase, supabase } = require('./db')
+const { initDatabase, supabase, ensureGymPriceColumns } = require('./db')
 
 const ROOT_DIR = path.join(__dirname, '..')
 const dev = process.env.NODE_ENV !== 'production'
@@ -18,12 +18,26 @@ const PORT = process.env.PORT || 3002
 
 
 function normalizeGym(row) {
+  const precioLibre = Number(row.precio_libre)
+  const precio12Pases = Number(row.precio_12_pases)
+
   return {
     gym_id: String(row.id),
     nombre: row.nombre,
     logo: row.logo,
     color: row.color,
+    precio_libre: Number.isFinite(precioLibre) && precioLibre >= 0 ? precioLibre : 0,
+    precio_12_pases: Number.isFinite(precio12Pases) && precio12Pases >= 0 ? precio12Pases : 0,
   }
+}
+
+function parsePositivePrice(value) {
+  const amount = Number(value)
+  if (!Number.isFinite(amount) || amount < 0) {
+    return null
+  }
+
+  return Math.round(amount * 100) / 100
 }
 
 function normalizeUser(row) {
@@ -351,6 +365,86 @@ app.put('/api/gym/:id', async (req, res) => {
     if (updateError) throw updateError
 
     return res.json({ success: true, gym: normalizeGym(updated) })
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error interno del servidor' })
+  }
+})
+
+app.get('/api/gym/:id/prices', async (req, res) => {
+  const { id } = req.params
+
+  try {
+    const { data: gym, error } = await supabase
+      .from('gyms')
+      .select('*')
+      .eq('id', id)
+      .single()
+
+    if (error || !gym) {
+      return res.status(404).json({ success: false, message: 'Gimnasio no encontrado' })
+    }
+
+    const normalized = normalizeGym(gym)
+
+    return res.json({
+      success: true,
+      prices: {
+        precio_libre: normalized.precio_libre,
+        precio_12_pases: normalized.precio_12_pases,
+      },
+    })
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'Error interno del servidor' })
+  }
+})
+
+app.put('/api/gym/:id/prices', async (req, res) => {
+  const { id } = req.params
+  const { precio_libre, precio_12_pases } = req.body
+
+  const parsedPrecioLibre = parsePositivePrice(precio_libre)
+  const parsedPrecio12Pases = parsePositivePrice(precio_12_pases)
+
+  if (parsedPrecioLibre === null || parsedPrecio12Pases === null) {
+    return res.status(400).json({
+      success: false,
+      message: 'Los precios deben ser numeros validos y positivos',
+    })
+  }
+
+  try {
+    await ensureGymPriceColumns()
+
+    const { data: updated, error: updateError } = await supabase
+      .from('gyms')
+      .update({
+        precio_libre: parsedPrecioLibre,
+        precio_12_pases: parsedPrecio12Pases,
+      })
+      .eq('id', id)
+      .select('*')
+      .single()
+
+    if (updateError || !updated) {
+      const message = String(updateError?.message || '')
+      if (message.toLowerCase().includes('precio_libre') || message.toLowerCase().includes('precio_12_pases')) {
+        return res.status(500).json({
+          success: false,
+          message: 'No se pudieron actualizar los precios porque faltan columnas en la base de datos.',
+        })
+      }
+      return res.status(404).json({ success: false, message: 'Gimnasio no encontrado' })
+    }
+
+    const normalized = normalizeGym(updated)
+    return res.json({
+      success: true,
+      prices: {
+        precio_libre: normalized.precio_libre,
+        precio_12_pases: normalized.precio_12_pases,
+      },
+      gym: normalized,
+    })
   } catch (error) {
     return res.status(500).json({ success: false, message: 'Error interno del servidor' })
   }

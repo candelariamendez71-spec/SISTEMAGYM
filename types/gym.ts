@@ -3,6 +3,8 @@ export interface Gym {
   nombre: string
   color: string
   logo: string
+  precio_libre: number
+  precio_12_pases: number
 }
 
 export interface User {

@@ -13,6 +13,76 @@ if (!supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
+const DEFAULT_PRICE_LIBRE = 0
+const DEFAULT_PRICE_12_PASES = 0
+
+async function runSqlMigration(sql) {
+  const attempts = [
+    () => supabase.rpc('execute_sql', { sql }),
+    () => supabase.rpc('exec_sql', { query: sql }),
+    () => supabase.rpc('run_sql', { sql_query: sql }),
+  ]
+
+  for (const attempt of attempts) {
+    try {
+      const { error } = await attempt()
+      if (!error) return true
+    } catch {
+      // Try the next RPC signature.
+    }
+  }
+
+  return false
+}
+
+async function ensureGymPriceColumns() {
+  const { error: selectError } = await supabase
+    .from('gyms')
+    .select('precio_libre, precio_12_pases')
+    .limit(1)
+
+  if (!selectError) {
+    await supabase
+      .from('gyms')
+      .update({ precio_libre: DEFAULT_PRICE_LIBRE })
+      .is('precio_libre', null)
+
+    await supabase
+      .from('gyms')
+      .update({ precio_12_pases: DEFAULT_PRICE_12_PASES })
+      .is('precio_12_pases', null)
+
+    return true
+  }
+
+  const message = String(selectError.message || '').toLowerCase()
+  const missingColumns =
+    message.includes('precio_libre') ||
+    message.includes('precio_12_pases') ||
+    message.includes('column')
+
+  if (!missingColumns) {
+    throw selectError
+  }
+
+  const migrationSql = `
+    ALTER TABLE gyms ADD COLUMN IF NOT EXISTS precio_libre NUMERIC NOT NULL DEFAULT ${DEFAULT_PRICE_LIBRE};
+    ALTER TABLE gyms ADD COLUMN IF NOT EXISTS precio_12_pases NUMERIC NOT NULL DEFAULT ${DEFAULT_PRICE_12_PASES};
+    UPDATE gyms
+    SET
+      precio_libre = COALESCE(precio_libre, ${DEFAULT_PRICE_LIBRE}),
+      precio_12_pases = COALESCE(precio_12_pases, ${DEFAULT_PRICE_12_PASES});
+  `
+
+  const migrated = await runSqlMigration(migrationSql)
+  if (!migrated) {
+    console.warn('Could not auto-migrate gym price columns. Please run the SQL migration manually.')
+    return false
+  }
+
+  return true
+}
+
 async function initDatabase() {
   try {
     const { error: connectError } = await supabase.from('gyms').select('id').limit(1)
@@ -24,6 +94,8 @@ async function initDatabase() {
     if (gymsError) {
       throw gymsError
     }
+
+    await ensureGymPriceColumns()
 
     if (!gyms || gyms.length === 0) {
       const { error: insertError } = await supabase.from('gyms').insert([
@@ -46,5 +118,6 @@ async function initDatabase() {
 
 module.exports = {
   supabase,
-  initDatabase
+  initDatabase,
+  ensureGymPriceColumns
 }
