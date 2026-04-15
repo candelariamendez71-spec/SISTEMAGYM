@@ -60,7 +60,8 @@ export default function CajaPage() {
   const [resumen, setResumen] = useState<Resumen | null>(null)
   const [loading, setLoading] = useState(false)
   const [showForm, setShowForm] = useState(false)
-  const [fechaFiltro, setFechaFiltro] = useState('')
+  const [fechaDesde, setFechaDesde] = useState('')
+  const [fechaHasta, setFechaHasta] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [movimientoToDelete, setMovimientoToDelete] = useState<number | null>(null)
   const { gym } = useGym()
@@ -97,9 +98,15 @@ export default function CajaPage() {
 
     setLoading(true)
     try {
-      const url = fechaFiltro 
-        ? `/api/caja/${gym.gym_id}?fecha=${fechaFiltro}`
-        : `/api/caja/${gym.gym_id}`
+      let url = `/api/caja/${gym.gym_id}`
+      const params = new URLSearchParams()
+      
+      if (fechaDesde) params.append('desde', fechaDesde)
+      if (fechaHasta) params.append('hasta', fechaHasta)
+      
+      if (params.toString()) {
+        url += `?${params.toString()}`
+      }
       
       const response = await fetch(url)
       const data = await response.json()
@@ -135,7 +142,7 @@ export default function CajaPage() {
       fetchMovimientos()
       fetchResumen()
     }
-  }, [gym, fechaFiltro])
+  }, [gym, fechaDesde, fechaHasta])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -464,25 +471,40 @@ export default function CajaPage() {
 
       {/* Filtros */}
       <Card>
-        <CardContent className="pt-4 md:pt-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 md:gap-4">
+        <CardHeader>
+          <CardTitle className="text-lg md:text-xl">Filtrar por Rango de Fechas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3 md:gap-4">
             <div className="flex-1 w-full sm:w-auto">
-              <Label className="text-sm">Filtrar por fecha</Label>
+              <Label className="text-sm">Desde</Label>
               <Input
                 type="date"
-                value={fechaFiltro}
-                onChange={(e) => setFechaFiltro(e.target.value)}
+                value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)}
                 className="mt-1 text-sm"
               />
             </div>
-            {fechaFiltro && (
+            <div className="flex-1 w-full sm:w-auto">
+              <Label className="text-sm">Hasta</Label>
+              <Input
+                type="date"
+                value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)}
+                className="mt-1 text-sm"
+              />
+            </div>
+            {(fechaDesde || fechaHasta) && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setFechaFiltro('')}
-                className="w-full sm:w-auto sm:mt-6"
+                onClick={() => {
+                  setFechaDesde('')
+                  setFechaHasta('')
+                }}
+                className="w-full sm:w-auto"
               >
-                Limpiar Filtro
+                Limpiar Filtros
               </Button>
             )}
           </div>
