@@ -277,19 +277,20 @@ export default function CajaPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 p-6">
+    <div className="max-w-6xl mx-auto space-y-4 md:space-y-6 p-3 md:p-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Caja</h1>
-          <p className="text-muted-foreground">Gestión de ingresos y egresos</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Caja</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Gestión de ingresos y egresos</p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={handleDownloadPDF} variant="outline">
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button onClick={handleDownloadPDF} variant="outline" className="w-full sm:w-auto">
             <Download className="w-4 h-4 mr-2" />
-            Reporte Mensual
+            <span className="hidden sm:inline">Reporte Mensual</span>
+            <span className="sm:hidden">Reporte</span>
           </Button>
-          <Button onClick={() => setShowForm(!showForm)}>
+          <Button onClick={() => setShowForm(!showForm)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Movimiento
           </Button>
@@ -298,17 +299,17 @@ export default function CajaPage() {
 
       {/* Resumen Cards */}
       {resumen && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-2 md:pb-3">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Total Ingresos
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-600" />
-                <span className="text-2xl font-bold text-green-600">
+              <div className="flex items-center gap-1 md:gap-2">
+                <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
+                <span className="text-lg md:text-2xl font-bold text-green-600">
                   {formatArs(resumen.ingresos)}
                 </span>
               </div>
@@ -316,15 +317,15 @@ export default function CajaPage() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-2 md:pb-3">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Total Egresos
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2">
-                <TrendingDown className="w-5 h-5 text-red-600" />
-                <span className="text-2xl font-bold text-red-600">
+              <div className="flex items-center gap-1 md:gap-2">
+                <TrendingDown className="w-4 h-4 md:w-5 md:h-5 text-red-600" />
+                <span className="text-lg md:text-2xl font-bold text-red-600">
                   {formatArs(resumen.egresos)}
                 </span>
               </div>
@@ -332,15 +333,15 @@ export default function CajaPage() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-2 md:pb-3">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Balance
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2">
-                <DollarSign className="w-5 h-5" />
-                <span className={`text-2xl font-bold ${resumen.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div className="flex items-center gap-1 md:gap-2">
+                <DollarSign className="w-4 h-4 md:w-5 md:h-5" />
+                <span className={`text-lg md:text-2xl font-bold ${resumen.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatArs(resumen.balance)}
                 </span>
               </div>
@@ -348,18 +349,18 @@ export default function CajaPage() {
           </Card>
 
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+            <CardHeader className="pb-2 md:pb-3">
+              <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">
                 Por Método
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-1">
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs md:text-sm">
                 <span>Efectivo:</span>
                 <span className="font-semibold">{formatArs(resumen.por_metodo.efectivo)}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span>Transferencia:</span>
+              <div className="flex justify-between text-xs md:text-sm">
+                <span>Transfer.:</span>
                 <span className="font-semibold">{formatArs(resumen.por_metodo.transferencia)}</span>
               </div>
             </CardContent>
@@ -377,15 +378,15 @@ export default function CajaPage() {
           >
             <Card>
               <CardHeader>
-                <CardTitle>Nuevo Movimiento</CardTitle>
+                <CardTitle className="text-lg md:text-xl">Nuevo Movimiento</CardTitle>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
-                      <Label>Tipo</Label>
+                      <Label className="text-sm">Tipo</Label>
                       <select
-                        className="w-full p-2 border rounded-md bg-black text-white [&>option]:bg-black [&>option]:text-white"
+                        className="w-full p-2 border rounded-md bg-black text-white text-sm [&>option]:bg-black [&>option]:text-white"
                         value={formData.tipo}
                         onChange={(e) => setFormData({ ...formData, tipo: e.target.value as any })}
                       >
@@ -395,9 +396,9 @@ export default function CajaPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Categoría</Label>
+                      <Label className="text-sm">Categoría</Label>
                       <select
-                        className="w-full p-2 border rounded-md bg-black text-white [&>option]:bg-black [&>option]:text-white"
+                        className="w-full p-2 border rounded-md bg-black text-white text-sm [&>option]:bg-black [&>option]:text-white"
                         value={formData.categoria}
                         onChange={(e) => setFormData({ ...formData, categoria: e.target.value as any })}
                       >
@@ -409,9 +410,9 @@ export default function CajaPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Método de Pago</Label>
+                      <Label className="text-sm">Método de Pago</Label>
                       <select
-                        className="w-full p-2 border rounded-md bg-black text-white [&>option]:bg-black [&>option]:text-white"
+                        className="w-full p-2 border rounded-md bg-black text-white text-sm [&>option]:bg-black [&>option]:text-white"
                         value={formData.metodo_pago}
                         onChange={(e) => setFormData({ ...formData, metodo_pago: e.target.value as any })}
                       >
@@ -424,17 +425,18 @@ export default function CajaPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Descripción</Label>
+                      <Label className="text-sm">Descripción</Label>
                       <Input
                         placeholder="Ej: Pago de mensualidad de Juan"
                         value={formData.descripcion}
                         onChange={(e) => setFormData({ ...formData, descripcion: e.target.value })}
                         required
+                        className="text-sm"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Monto (ARS)</Label>
+                      <Label className="text-sm">Monto (ARS)</Label>
                       <Input
                         type="number"
                         step="0.01"
@@ -442,13 +444,14 @@ export default function CajaPage() {
                         value={formData.monto}
                         onChange={(e) => setFormData({ ...formData, monto: e.target.value })}
                         required
+                        className="text-sm"
                       />
                     </div>
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button type="submit">Guardar Movimiento</Button>
-                    <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button type="submit" className="w-full sm:w-auto">Guardar Movimiento</Button>
+                    <Button type="button" variant="outline" onClick={() => setShowForm(false)} className="w-full sm:w-auto">
                       Cancelar
                     </Button>
                   </div>
@@ -461,22 +464,23 @@ export default function CajaPage() {
 
       {/* Filtros */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <Label>Filtrar por fecha</Label>
+        <CardContent className="pt-4 md:pt-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 md:gap-4">
+            <div className="flex-1 w-full sm:w-auto">
+              <Label className="text-sm">Filtrar por fecha</Label>
               <Input
                 type="date"
                 value={fechaFiltro}
                 onChange={(e) => setFechaFiltro(e.target.value)}
-                className="mt-1"
+                className="mt-1 text-sm"
               />
             </div>
             {fechaFiltro && (
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => setFechaFiltro('')}
-                className="mt-6"
+                className="w-full sm:w-auto sm:mt-6"
               >
                 Limpiar Filtro
               </Button>
@@ -488,41 +492,98 @@ export default function CajaPage() {
       {/* Tabla de Movimientos */}
       <Card>
         <CardHeader>
-          <CardTitle>Movimientos ({movimientos.length})</CardTitle>
+          <CardTitle className="text-lg md:text-xl">Movimientos ({movimientos.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">Cargando...</p>
+              <p className="text-muted-foreground text-sm">Cargando...</p>
             </div>
           ) : movimientos.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-muted-foreground">No hay movimientos registrados</p>
+              <p className="text-muted-foreground text-sm">No hay movimientos registrados</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-3">Fecha</th>
-                    <th className="text-left p-3">Tipo</th>
-                    <th className="text-left p-3">Categoría</th>
-                    <th className="text-left p-3">Descripción</th>
-                    <th className="text-left p-3">Método</th>
-                    <th className="text-right p-3">Monto</th>
-                    <th className="text-right p-3">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {movimientos.map((mov) => (
-                    <motion.tr
-                      key={mov.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="border-b hover:bg-muted/50 transition-colors"
-                    >
-                      <td className="p-3 text-sm">{formatDate(mov.fecha)}</td>
-                      <td className="p-3">
+            <>
+              {/* Vista de tabla para desktop */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-3 text-sm">Fecha</th>
+                      <th className="text-left p-3 text-sm">Tipo</th>
+                      <th className="text-left p-3 text-sm">Categoría</th>
+                      <th className="text-left p-3 text-sm">Descripción</th>
+                      <th className="text-left p-3 text-sm">Método</th>
+                      <th className="text-right p-3 text-sm">Monto</th>
+                      <th className="text-right p-3 text-sm">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {movimientos.map((mov) => (
+                      <motion.tr
+                        key={mov.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="border-b hover:bg-muted/50 transition-colors"
+                      >
+                        <td className="p-3 text-sm">{formatDate(mov.fecha)}</td>
+                        <td className="p-3">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
+                            mov.tipo === 'ingreso' 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {mov.tipo === 'ingreso' ? (
+                              <TrendingUp className="w-3 h-3" />
+                            ) : (
+                              <TrendingDown className="w-3 h-3" />
+                            )}
+                            {mov.tipo}
+                          </span>
+                        </td>
+                        <td className="p-3 text-sm capitalize">{mov.categoria.replace('_', ' ')}</td>
+                        <td className="p-3 text-sm">{mov.descripcion}</td>
+                        <td className="p-3 text-sm capitalize">
+                          {mov.metodo_pago === 'efectivo' ? (
+                            <Wallet className="w-4 h-4 inline mr-1" />
+                          ) : (
+                            <CreditCard className="w-4 h-4 inline mr-1" />
+                          )}
+                          {mov.metodo_pago}
+                        </td>
+                        <td className={`p-3 text-right font-semibold ${
+                          mov.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {formatArs(mov.monto)}
+                        </td>
+                        <td className="p-3 text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(mov.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Vista de cards para móvil */}
+              <div className="md:hidden space-y-3">
+                {movimientos.map((mov) => (
+                  <motion.div
+                    key={mov.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="border rounded-lg p-3 space-y-2"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
                           mov.tipo === 'ingreso' 
                             ? 'bg-green-100 text-green-700' 
@@ -535,37 +596,47 @@ export default function CajaPage() {
                           )}
                           {mov.tipo}
                         </span>
-                      </td>
-                      <td className="p-3 text-sm capitalize">{mov.categoria.replace('_', ' ')}</td>
-                      <td className="p-3 text-sm">{mov.descripcion}</td>
-                      <td className="p-3 text-sm capitalize">
+                        <p className="text-sm text-muted-foreground mt-1">{formatDate(mov.fecha)}</p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(mov.id)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Categoría:</span>{' '}
+                        <span className="capitalize">{mov.categoria.replace('_', ' ')}</span>
+                      </p>
+                      <p className="text-sm">
+                        <span className="text-muted-foreground">Descripción:</span>{' '}
+                        {mov.descripcion}
+                      </p>
+                      <p className="text-sm flex items-center">
+                        <span className="text-muted-foreground mr-1">Método:</span>
                         {mov.metodo_pago === 'efectivo' ? (
-                          <Wallet className="w-4 h-4 inline mr-1" />
+                          <Wallet className="w-3 h-3 inline mr-1" />
                         ) : (
-                          <CreditCard className="w-4 h-4 inline mr-1" />
+                          <CreditCard className="w-3 h-3 inline mr-1" />
                         )}
-                        {mov.metodo_pago}
-                      </td>
-                      <td className={`p-3 text-right font-semibold ${
-                        mov.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {formatArs(mov.monto)}
-                      </td>
-                      <td className="p-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(mov.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        <span className="capitalize">{mov.metodo_pago}</span>
+                      </p>
+                    </div>
+                    
+                    <div className={`text-right text-lg font-bold ${
+                      mov.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {formatArs(mov.monto)}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
