@@ -1,4 +1,4 @@
-import type { Gym, User, AccessResponse, LoginResponse } from '@/types/gym'
+import type { Gym, User, AccessResponse, LoginResponse, HistorialEvent } from '@/types/gym'
 
 const API_BASE_URL = ''
 
@@ -21,11 +21,16 @@ async function request<T>(path: string, options: RequestInit): Promise<T> {
   return data as T
 }
 
-export async function login(usuario: string, contraseña: string): Promise<LoginResponse & { users?: User[] }> {
-  const data = await request<{ success: boolean; gym?: Gym; users?: User[]; message?: string }>('/api/login', {
+export async function login(usuario: string, contraseña: string, pin?: string): Promise<LoginResponse & { users?: User[]; role?: 'owner' | 'staff' }> {
+  const body: any = { usuario, password: contraseña }
+  if (pin) {
+    body.pin = pin
+  }
+  
+  const data = await request<{ success: boolean; gym?: Gym; users?: User[]; role?: 'owner' | 'staff'; message?: string }>('/api/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ usuario, password: contraseña }),
+    body: JSON.stringify(body),
   })
   return data
 }
@@ -105,5 +110,39 @@ export async function updateGymPrices(gymId: string, payload: { precio_libre: nu
     }
   )
 
+  return data
+}
+
+// 🆕 FUNCIONES PARA HUELLAS DIGITALES
+export async function assignFingerprint(userId: string, fingerId: number): Promise<{ success: boolean; user?: User; message?: string }> {
+  const data = await request<{ success: boolean; user?: User; message?: string }>(
+    '/api/user/' + encodeURIComponent(userId) + '/fingerprint',
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ finger_id: fingerId }),
+    }
+  )
+  return data
+}
+
+export async function checkAccessByFingerprint(fingerId: number, gymId: string): Promise<AccessResponse> {
+  const data = await request<AccessResponse>('/api/access/fingerprint', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ finger_id: fingerId, gym_id: gymId }),
+  })
+  return data
+}
+
+// 🆕 FUNCIÓN PARA HISTORIAL
+export async function getUserHistory(userId: string): Promise<{ success: boolean; historial?: HistorialEvent[]; message?: string }> {
+  const data = await request<{ success: boolean; historial?: HistorialEvent[]; message?: string }>(
+    '/api/user/' + encodeURIComponent(userId) + '/historial',
+    {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+    }
+  )
   return data
 }

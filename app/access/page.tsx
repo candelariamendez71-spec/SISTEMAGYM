@@ -3,17 +3,19 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { CheckCircle, XCircle, Settings, ArrowRight } from 'lucide-react'
+import { CheckCircle, XCircle, Settings, ArrowRight, Fingerprint, CreditCard } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AnimatedLogo } from '@/components/animated-logo'
 import { GlowText } from '@/components/animated-text'
 import { useGym } from '@/context/gym-context'
 import { useSound } from '@/hooks/use-sound'
-import { checkAccess } from '@/lib/api'
+import { checkAccess, checkAccessByFingerprint } from '@/lib/api'
 import type { User } from '@/types/gym'
 
 type AccessState = 'idle' | 'success' | 'error'
+type AccessMode = 'dni' | 'fingerprint'
 
 interface AccessResult {
   state: AccessState
@@ -25,6 +27,8 @@ interface AccessResult {
 
 export default function AccessPage() {
   const [dni, setDni] = useState('')
+  const [fingerId, setFingerId] = useState('')
+  const [accessMode, setAccessMode] = useState<AccessMode>('dni')
   const [accessResult, setAccessResult] = useState<AccessResult>({ state: 'idle', message: '' })
   const [loading, setLoading] = useState(false)
   const { gym, users, setUsers, isAuthenticated, logout } = useGym()
@@ -40,6 +44,7 @@ export default function AccessPage() {
   const resetState = useCallback(() => {
     setAccessResult({ state: 'idle', message: '' })
     setDni('')
+    setFingerId('')
   }, [])
 
   useEffect(() => {
@@ -90,9 +95,54 @@ export default function AccessPage() {
     }
   }
 
+  const handleAccessByFingerprint = async () => {
+    if (!fingerId.trim() || !gym) return
+
+    setLoading(true)
+    try {
+      const response = await checkAccessByFingerprint(parseInt(fingerId), gym.gym_id)
+
+      if (response.success && response.user) {
+        const accessedUser = response.user
+        playSuccess()
+
+        const updatedUsers = users.map(u =>
+          u.id === accessedUser.id ? { ...accessedUser } : u
+        )
+        setUsers(updatedUsers)
+
+        setAccessResult({
+          state: 'success',
+          message: `Bienvenido, ${accessedUser.nombre}`,
+          userName: accessedUser.nombre,
+          subMessage: response.message,
+          remainingPasses: response.pases_restantes,
+        })
+      } else {
+        playError()
+        setAccessResult({
+          state: 'error',
+          message: response.message,
+        })
+      }
+    } catch {
+      playError()
+      setAccessResult({
+        state: 'error',
+        message: 'Error de conexión',
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && dni.trim()) {
-      handleAccess()
+    if (e.key === 'Enter') {
+      if (accessMode === 'dni' && dni.trim()) {
+        handleAccess()
+      } else if (accessMode === 'fingerprint' && fingerId.trim()) {
+        handleAccessByFingerprint()
+      }
     }
   }
 
@@ -168,52 +218,120 @@ export default function AccessPage() {
               </h2>
               
               <p className="text-lg md:text-xl text-muted-foreground mb-8">
-                Ingresá tu DNI
+                Método de acceso
               </p>
 
-              <div className="relative mb-4">
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={dni}
-                  onChange={(e) => setDni(e.target.value.replace(/\D/g, ''))}
-                  onKeyDown={handleKeyDown}
-                  placeholder="DNI"
-                  className="h-20 text-center text-3xl md:text-4xl font-bold bg-secondary/50 border-2 border-border focus:border-primary rounded-2xl tracking-widest text-foreground placeholder:text-muted-foreground"
-                  maxLength={10}
-                  autoFocus
-                />
-              </div>
-
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+              <Tabs 
+                defaultValue="dni" 
+                value={accessMode} 
+                onValueChange={(v) => setAccessMode(v as AccessMode)}
+                className="w-full mb-4"
               >
-                <Button
-                  onClick={handleAccess}
-                  disabled={!dni.trim() || loading}
-                  className="w-full h-16 text-xl font-bold rounded-2xl shadow-lg transition-all duration-300"
-                  style={{ 
-                    backgroundColor: primaryColor,
-                    color: '#000000',
-                    boxShadow: `0 10px 40px ${primaryColor}40`
-                  }}
-                >
-                  {loading ? (
-                    <motion.div
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="w-6 h-6 border-3 border-black/30 border-t-black rounded-full"
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="dni" className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4" />
+                    DNI
+                  </TabsTrigger>
+                  <TabsTrigger value="fingerprint" className="flex items-center gap-2">
+                    <Fingerprint className="w-4 h-4" />
+                    Huella
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="dni">
+                  <div className="relative mb-4">
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={dni}
+                      onChange={(e) => setDni(e.target.value.replace(/\D/g, ''))}
+                      onKeyDown={handleKeyDown}
+                      placeholder="DNI"
+                      className="h-20 text-center text-3xl md:text-4xl font-bold bg-secondary/50 border-2 border-border focus:border-primary rounded-2xl tracking-widest text-foreground placeholder:text-muted-foreground"
+                      maxLength={10}
+                      autoFocus
                     />
-                  ) : (
-                    <>
-                      INGRESAR
-                      <ArrowRight className="ml-2 h-6 w-6" />
-                    </>
-                  )}
-                </Button>
-              </motion.div>
+                  </div>
+
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button
+                      onClick={handleAccess}
+                      disabled={!dni.trim() || loading}
+                      className="w-full h-16 text-xl font-bold rounded-2xl shadow-lg transition-all duration-300"
+                      style={{ 
+                        backgroundColor: primaryColor,
+                        color: '#000000',
+                        boxShadow: `0 10px 40px ${primaryColor}40`
+                      }}
+                    >
+                      {loading ? (
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-6 h-6 border-3 border-black/30 border-t-black rounded-full"
+                        />
+                      ) : (
+                        <>
+                          INGRESAR
+                          <ArrowRight className="ml-2 h-6 w-6" />
+                        </>
+                      )}
+                    </Button>
+                  </motion.div>
+                </TabsContent>
+
+                <TabsContent value="fingerprint">
+                  <div className="relative mb-4">
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      value={fingerId}
+                      onChange={(e) => setFingerId(e.target.value.replace(/\D/g, ''))}
+                      onKeyDown={handleKeyDown}
+                      placeholder="ID Huella"
+                      className="h-20 text-center text-3xl md:text-4xl font-bold bg-secondary/50 border-2 border-border focus:border-primary rounded-2xl tracking-widest text-foreground placeholder:text-muted-foreground"
+                      maxLength={3}
+                    />
+                    <p className="text-xs text-muted-foreground mt-2">
+                      🔒 Este campo es llenado automáticamente por el sensor de huella
+                    </p>
+                  </div>
+
+                  <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <Button
+                      onClick={handleAccessByFingerprint}
+                      disabled={!fingerId.trim() || loading}
+                      className="w-full h-16 text-xl font-bold rounded-2xl shadow-lg transition-all duration-300"
+                      style={{ 
+                        backgroundColor: primaryColor,
+                        color: '#000000',
+                        boxShadow: `0 10px 40px ${primaryColor}40`
+                      }}
+                    >
+                      {loading ? (
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-6 h-6 border-3 border-black/30 border-t-black rounded-full"
+                        />
+                      ) : (
+                        <>
+                          <Fingerprint className="mr-2 h-6 w-6" />
+                          VERIFICAR HUELLA
+                        </>
+                      )}
+                    </Button>
+                  </motion.div>
+                </TabsContent>
+              </Tabs>
             </motion.div>
           ) : accessResult.state === 'success' ? (
             <SuccessScreen 

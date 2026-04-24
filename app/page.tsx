@@ -14,11 +14,13 @@ import { login } from '@/lib/api'
 export default function LoginPage() {
   const [usuario, setUsuario] = useState('')
   const [contraseña, setContraseña] = useState('')
+  const [pin, setPin] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [showPin, setShowPin] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
-  const { setGym, setUsers } = useGym()
+  const { setGym, setUsers, setRole } = useGym()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,12 +33,14 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const response = await login(usuario, contraseña)
+      const response = await login(usuario, contraseña, pin || undefined)
       if (response.success && response.gym) {
         setGym(response.gym)
         if (response.users) {
           setUsers(response.users)
         }
+        // 🆕 Guardar rol (por defecto staff si no viene)
+        setRole(response.role || 'staff')
         router.push('/access')
       } else {
         setError(response.message || 'Error al iniciar sesión')
@@ -122,6 +126,35 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
+            </div>
+
+            {/* 🆕 Campo opcional de PIN para Owner */}
+            <div className="space-y-2">
+              <label htmlFor="pin" className="text-sm font-medium text-foreground flex items-center gap-2">
+                PIN de Administrador
+                <span className="text-xs text-muted-foreground font-normal">(opcional)</span>
+              </label>
+              <div className="relative">
+                <Input
+                  id="pin"
+                  type={showPin ? 'text' : 'password'}
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value)}
+                  placeholder="Solo para dueño"
+                  className="h-12 bg-secondary/50 border-border focus:border-primary focus:ring-primary/20 pr-12 text-foreground placeholder:text-muted-foreground"
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPin(!showPin)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showPin ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Ingresa tu PIN para acceder como dueño con permisos completos
+              </p>
             </div>
 
             {error && (

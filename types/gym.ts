@@ -18,6 +18,18 @@ export interface User {
   gym_id: string
   activo: boolean
   created_at: string
+  finger_id?: number | null
+}
+
+export interface HistorialEvent {
+  id: number
+  user_id: number
+  gym_id: number
+  tipo_evento: 'alta' | 'ingreso' | 'vencimiento' | 'renovacion' | 'inactividad' | 'reactivacion' | 'modificacion' | 'asignacion_huella'
+  descripcion: string
+  fecha: string
+  hora: string
+  created_at: string
 }
 
 export interface AccessResponse {

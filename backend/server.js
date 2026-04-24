@@ -4,6 +4,16 @@ const path = require('path')
 const next = require('next')
 const PDFDocument = require('pdfkit')
 const { initDatabase, supabase, ensureGymPriceColumns } = require('./db')
+const {
+  requireOwner,
+  extractRole,
+  registrarAlta,
+  registrarIngreso,
+  registrarVencimiento,
+  registrarRenovacion,
+  registrarReactivacion,
+  initializeExtensions,
+} = require('./server-extensions')
 
 const ROOT_DIR = path.join(__dirname, '..')
 const dev = process.env.NODE_ENV !== 'production'
@@ -73,7 +83,7 @@ app.use('/_next', express.static(path.join(ROOT_DIR, '.next')))
 
 app.post('/api/login', async (req, res) => {
 
-  const { usuario, password } = req.body
+  const { usuario, password, pin } = req.body
 
   if (!usuario || !password) {
     return res.status(400).json({ success: false, message: 'Usuario y contraseña son obligatorios' })
@@ -100,6 +110,17 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Credenciales inválidas' })
     }
 
+    // 🆕 SISTEMA DE ROLES: Validar PIN para determinar rol
+    let role = 'staff'
+    if (pin && gym.admin_pin && pin === gym.admin_pin) {
+      role = 'owner'
+      console.log('✅ Login como Owner (PIN correcto)')
+    } else if (pin) {
+      console.log('⚠️  PIN incorrecto, login como Staff')
+    } else {
+      console.log('ℹ️  Sin PIN, login como Staff')
+    }
+
     const { data: users, error: usersError } = await supabase
       .from('usuarios')
       .select('*')
@@ -109,6 +130,7 @@ app.post('/api/login', async (req, res) => {
 
     return res.json({
       success: true,
+      role,
       gym: normalizeGym(gym),
       users: (users || []).map(normalizeUser),
     })
@@ -147,6 +169,9 @@ app.post('/api/access', async (req, res) => {
         .update({ estado: 'inactivo' })
         .eq('id', user.id)
 
+      // 🆕 REGISTRAR VENCIMIENTO EN HISTORIAL
+      await registrarVencimiento(user.id, gym_id, user.nombre)
+
       return res.status(400).json({ success: false, message: 'Plan vencido. Usuario inactivado.' })
     }
 
@@ -169,10 +194,16 @@ app.post('/api/access', async (req, res) => {
       await supabase
         .from('ingresos')
         .insert([{ usuario_id: user.id, fecha: new Date().toISOString() }])
+      
+      // 🆕 REGISTRAR INGRESO EN HISTORIAL
+      await registrarIngreso(user.id, gym_id, user.nombre, 'DNI')
     } else {
       await supabase
         .from('ingresos')
         .insert([{ usuario_id: user.id, fecha: new Date().toISOString() }])
+      
+      // 🆕 REGISTRAR INGRESO EN HISTORIAL
+      await registrarIngreso(user.id, gym_id, user.nombre, 'DNI')
     }
 
     const { data: updatedUser, error: updateError } = await supabase
@@ -231,6 +262,9 @@ app.post('/api/user', async (req, res) => {
       .single()
 
     if (error) throw error
+
+    // 🆕 REGISTRAR ALTA EN HISTORIAL
+    await registrarAlta(newUser.id, gym_id, nombre.trim(), plan)
 
     return res.json({ success: true, user: normalizeUser(newUser) })
   } catch (error) {
@@ -324,6 +358,9 @@ app.post('/api/renew', async (req, res) => {
       .single()
 
     if (updateError) throw updateError
+
+    // 🆕 REGISTRAR RENOVACIÓN EN HISTORIAL
+    await registrarRenovacion(updatedUser.id, gym_id, updatedUser.nombre, plan)
 
     return res.json({ success: true, user: normalizeUser(updatedUser) })
   } catch (error) {
@@ -542,7 +579,8 @@ app.post('/api/caja', async (req, res) => {
 })
 
 // DELETE /api/caja/:id - Eliminar movimiento (debe ir ANTES del GET con :gym_id)
-app.delete('/api/caja/:id', async (req, res) => {
+// 🆕 SOLO OWNER puede eliminar
+app.delete('/api/caja/:id', requireOwner, async (req, res) => {
   const { id } = req.params
 
   if (!id) {
@@ -611,7 +649,8 @@ app.get('/api/caja/:gym_id', async (req, res) => {
 })
 
 // GET /api/caja/:gym_id/resumen - Resumen de ingresos/egresos
-app.get('/api/caja/:gym_id/resumen', async (req, res) => {
+// 🆕 SOLO OWNER puede ver el resumen
+app.get('/api/caja/:gym_id/resumen', requireOwner, async (req, res) => {
   const { gym_id } = req.params
   const { desde, hasta } = req.query
 
@@ -665,7 +704,8 @@ app.get('/api/caja/:gym_id/resumen', async (req, res) => {
 })
 
 // GET /api/caja/:gym_id/reporte-mensual - Generar PDF mensual
-app.get('/api/caja/:gym_id/reporte-mensual', async (req, res) => {
+// 🆕 SOLO OWNER puede generar PDF
+app.get('/api/caja/:gym_id/reporte-mensual', requireOwner, async (req, res) => {
   const { gym_id } = req.params
   const { mes, anio } = req.query
 
@@ -818,6 +858,9 @@ app.get('/api/caja/:gym_id/reporte-mensual', async (req, res) => {
 })
 
 nextApp.prepare().then(() => {
+  // 🆕 INICIALIZAR EXTENSIONES DEL SISTEMA
+  initializeExtensions(app, PDFDocument)
+
   app.all('*', (req, res) => handle(req, res))
 
   initDatabase().then((created) => {

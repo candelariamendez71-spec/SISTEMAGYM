@@ -10,6 +10,8 @@ interface GymContextType {
   users: User[]
   setUsers: (users: User[]) => void
   isAuthenticated: boolean
+  role: 'owner' | 'staff'
+  setRole: (role: 'owner' | 'staff') => void
   logout: () => void
 }
 
@@ -36,6 +38,7 @@ export function GymProvider({ children }: { children: ReactNode }) {
   const [gym, setGymState] = useState<Gym | null>(null)
   const [users, setUsersState] = useState<User[]>(demoUsers)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [role, setRoleState] = useState<'owner' | 'staff'>('staff')
 
   const applyGymColor = (color: string | null) => {
     const root = document.documentElement
@@ -56,12 +59,18 @@ export function GymProvider({ children }: { children: ReactNode }) {
     const loadSession = async () => {
       const savedGym = localStorage.getItem('gym')
       const savedUsers = localStorage.getItem('users')
+      const savedRole = localStorage.getItem('role')
 
       if (savedGym) {
         const parsedGym = JSON.parse(savedGym) as Gym
         setGymState(parsedGym)
         setIsAuthenticated(true)
         applyGymColor(parsedGym.color)
+
+        // 🆕 Restaurar rol
+        if (savedRole === 'owner' || savedRole === 'staff') {
+          setRoleState(savedRole)
+        }
 
         try {
           const response = await getUsers(parsedGym.gym_id)
@@ -101,16 +110,23 @@ export function GymProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('users', JSON.stringify(newUsers))
   }
 
+  const setRole = (newRole: 'owner' | 'staff') => {
+    setRoleState(newRole)
+    localStorage.setItem('role', newRole)
+  }
+
   const logout = () => {
     setGymState(null)
     localStorage.removeItem('gym')
     localStorage.removeItem('users')
+    localStorage.removeItem('role')
     setUsersState([])
     setIsAuthenticated(false)
+    setRoleState('staff')
   }
 
   return (
-    <GymContext.Provider value={{ gym, setGym, users, setUsers, isAuthenticated, logout }}>
+    <GymContext.Provider value={{ gym, setGym, users, setUsers, isAuthenticated, role, setRole, logout }}>
       {children}
     </GymContext.Provider>
   )

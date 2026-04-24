@@ -64,8 +64,11 @@ export default function CajaPage() {
   const [fechaHasta, setFechaHasta] = useState('')
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [movimientoToDelete, setMovimientoToDelete] = useState<number | null>(null)
-  const { gym } = useGym()
+  const { gym, role } = useGym()
   const { playSuccess, playError } = useSound()
+
+  // 🆕 Determinar si es Owner
+  const isOwner = role === 'owner'
 
   // Form state
   const [formData, setFormData] = useState({
@@ -123,14 +126,18 @@ export default function CajaPage() {
   }
 
   const fetchResumen = async () => {
-    if (!gym) return
+    if (!gym || !isOwner) return // Solo Owner puede ver resumen
 
     try {
-      const response = await fetch(`/api/caja/${gym.gym_id}/resumen`)
+      const response = await fetch(`/api/caja/${gym.gym_id}/resumen`, {
+        headers: { 'role': role }
+      })
       const data = await response.json()
 
       if (data.success) {
         setResumen(data)
+      } else {
+        console.log('No se pudo obtener resumen:', data.message)
       }
     } catch (error) {
       console.error('Error fetching resumen:', error)
@@ -140,9 +147,11 @@ export default function CajaPage() {
   useEffect(() => {
     if (gym) {
       fetchMovimientos()
-      fetchResumen()
+      if (isOwner) {
+        fetchResumen()
+      }
     }
-  }, [gym, fechaDesde, fechaHasta])
+  }, [gym, fechaDesde, fechaHasta, isOwner])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -204,7 +213,11 @@ export default function CajaPage() {
   }
 
   const handleDownloadPDF = async () => {
-    if (!gym) return
+    if (!gym || !isOwner) {
+      toast.error('Solo el dueño puede descargar reportes')
+      playError()
+      return
+    }
 
     const now = new Date()
     const mes = now.getMonth() + 1
@@ -212,7 +225,10 @@ export default function CajaPage() {
 
     try {
       const response = await fetch(
-        `/api/caja/${gym.gym_id}/reporte-mensual?mes=${mes}&anio=${anio}`
+        `/api/caja/${gym.gym_id}/reporte-mensual?mes=${mes}&anio=${anio}`,
+        {
+          headers: { 'role': role }
+        }
       )
 
       if (response.ok) {
@@ -244,13 +260,18 @@ export default function CajaPage() {
   }
 
   const confirmDelete = async () => {
-    if (!movimientoToDelete) return
+    if (!movimientoToDelete || !isOwner) {
+      toast.error('Solo el dueño puede eliminar movimientos')
+      playError()
+      return
+    }
 
     console.log('Eliminando movimiento ID:', movimientoToDelete)
 
     try {
       const response = await fetch(`/api/caja/${movimientoToDelete}`, {
         method: 'DELETE',
+        headers: { 'role': role }
       })
 
       console.log('Respuesta del servidor:', response.status)
@@ -289,14 +310,23 @@ export default function CajaPage() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">Caja</h1>
-          <p className="text-sm md:text-base text-muted-foreground">Gestión de ingresos y egresos</p>
+          <p className="text-sm md:text-base text-muted-foreground">
+            Gestión de ingresos y egresos
+            {/* 🆕 Mostrar rol actual */}
+            <span className="ml-2 text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
+              {isOwner ? '👑 Dueño' : '👤 Staff'}
+            </span>
+          </p>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
-          <Button onClick={handleDownloadPDF} variant="outline" className="w-full sm:w-auto">
-            <Download className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Reporte Mensual</span>
-            <span className="sm:hidden">Reporte</span>
-          </Button>
+          {/* 🆕 Solo Owner puede descargar reporte */}
+          {isOwner && (
+            <Button onClick={handleDownloadPDF} variant="outline" className="w-full sm:w-auto">
+              <Download className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Reporte Mensual</span>
+              <span className="sm:hidden">Reporte</span>
+            </Button>
+          )}
           <Button onClick={() => setShowForm(!showForm)} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Nuevo Movimiento
@@ -304,8 +334,8 @@ export default function CajaPage() {
         </div>
       </div>
 
-      {/* Resumen Cards */}
-      {resumen && (
+      {/* Resumen Cards - 🆕 Solo Owner */}
+      {resumen && isOwner && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <Card>
             <CardHeader className="pb-2 md:pb-3">
@@ -580,14 +610,17 @@ export default function CajaPage() {
                           {formatArs(mov.monto)}
                         </td>
                         <td className="p-3 text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(mov.id)}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {/* 🆕 Solo Owner puede eliminar */}
+                          {isOwner && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDelete(mov.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </td>
                       </motion.tr>
                     ))}
@@ -620,14 +653,17 @@ export default function CajaPage() {
                         </span>
                         <p className="text-sm text-muted-foreground mt-1">{formatDate(mov.fecha)}</p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(mov.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      {/* 🆕 Solo Owner puede eliminar */}
+                      {isOwner && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(mov.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
                     </div>
                     
                     <div className="space-y-1">
